@@ -1,0 +1,45 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: masterbarang_db
+    restart: always
+    environment:
+      POSTGRES_DB:       masterbarang_db
+      POSTGRES_USER:     masterbarng
+      POSTGRES_PASSWORD: MasterBarang2024!
+    ports:
+      - "3306:5432"    # host:container — akses dari luar pakai port 3306
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - masterbarang_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U masterbarng -d masterbarang_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: .
+    container_name: masterbarang_api
+    restart: always
+    ports:
+      - "1626:8000"    # host:container — akses dari luar pakai port 1626
+    environment:
+      DATABASE_URL: postgresql+asyncpg://masterbarng:MasterBarang2024!@db:5432/masterbarang_db
+      EVIDENCE_DIR: /app/evidence
+    volumes:
+      - ./evidence:/app/evidence
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - masterbarang_net
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --workers 2
+
+networks:
+  masterbarang_net:
+    driver: bridge
+
+volumes:
+  pg_data:

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        Splash/launch theme sebelum Compose mengambil alih.
+        Tidak menggunakan AppCompat agar tidak perlu dependency tambahan.
+        android:Theme.Material.Light.NoActionBar sudah tersedia di Android SDK.
+    -->
+    <style name="Theme.AssetTrack" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@android:color/white</item>
+        <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:windowContentOverlay">@null</item>
+    </style>
+</resources>

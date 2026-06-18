@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Untuk foto dari kamera -->
+    <cache-path name="cache_images" path="." />
+    <!-- Untuk MasterBarang di Downloads -->
+    <external-path name="external_downloads" path="Download/MasterBarang/" />
+</paths>
