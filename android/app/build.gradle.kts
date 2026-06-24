@@ -21,11 +21,11 @@ android {
 
     buildTypes {
         debug {
-            buildConfigField("String", "BASE_URL", "\"http://192.168.70.86:1626/\"")
+            buildConfigField("String", "BASE_URL", "\"http://172.16.170.128:1626/\"")
         }
         release {
             isMinifyEnabled = false
-            buildConfigField("String", "BASE_URL", "\"http://192.168.70.86:1626/\"")
+            buildConfigField("String", "BASE_URL", "\"http://172.16.170.128:1626/\"")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

@@ -32,14 +32,16 @@ Sistem manajemen barang offline-first berbasis Android dengan backend FastAPI + 
 │  File: Downloads/MasterBarang/bukti/              │
 └────────────────────┬─────────────────────────────┘
                      │ HTTP/JSON
-                     │ WiFi / Internet
+                     │ WiFi / Internet (Port 1626)
                      ▼
 ┌──────────────────────────────────────────────────┐
 │              DOCKER (Server/Laptop)               │
 │                                                   │
-│  FastAPI → port 8000                              │
-│  PostgreSQL → port 5432                           │
-│  Evidence files → ./backend/evidence/             │
+│  Portainer (Manajemen)    → port 9000            │
+│  pgAdmin (GUI DB)         → port 5050            │
+│  FastAPI (API Gateway)    → port 1626 (ext)      │
+│  PostgreSQL (Database)    → port 3306 (ext)      │
+│  Evidence files           → ./backend/evidence/  │
 └──────────────────────────────────────────────────┘
 ```
 
@@ -81,7 +83,7 @@ assettrack/
 │   ├── main.py                 ← Entry point FastAPI
 │   ├── requirements.txt
 │   ├── Dockerfile
-│   └── docker-compose.yml
+│   └── docker-compose.yml      ← Konfigurasi Docker (API, DB, pgAdmin, Portainer)
 │
 ├── init_database.sql           ← Script SQL manual PostgreSQL
 └── DOKUMENTASI.md              ← File ini
@@ -93,7 +95,7 @@ assettrack/
 
 ### Prasyarat
 - Docker & Docker Compose terinstall
-- Port 8000 dan 5432 tidak dipakai aplikasi lain
+- Port `1626` (API), `3306` (PostgreSQL), `5050` (pgAdmin), dan `9000` (Portainer) tidak digunakan oleh aplikasi lain.
 
 ### Langkah-langkah
 
@@ -101,27 +103,26 @@ assettrack/
 # 1. Masuk ke folder backend
 cd assettrack/backend
 
-# 2. Build dan jalankan semua container
+# 2. Build dan jalankan semua container (API, DB, pgAdmin, Portainer)
 sudo docker compose up -d --build
 
 # 3. Cek status container (tunggu ~30 detik pertama kali)
 sudo docker compose ps
 
 # Output yang diharapkan:
-# NAME               STATUS          PORTS
-# masterbarang_api   Up (healthy)    0.0.0.0:8000->8000/tcp
-# masterbarang_db    Up (healthy)    0.0.0.0:5432->5432/tcp
+# NAME                     STATUS          PORTS
+# masterbarang_api         Up              0.0.0.0:1626->8000/tcp
+# masterbarang_db          Up (healthy)    0.0.0.0:3306->5432/tcp
+# masterbarang_pgadmin     Up              0.0.0.0:5050->80/tcp
+# masterbarang_portainer   Up              0.0.0.0:9000->9000/tcp
 
 # 4. Test API berjalan
-curl http://localhost:8000/api/v1/health
+curl http://localhost:1626/api/v1/health
 # → {"status":"ok","version":"1.0.0","db":"ok"}
 
 # 5. Lihat dokumentasi API interaktif
-# Buka browser: http://localhost:8000/docs
+# Buka browser: http://localhost:1626/docs
 ```
-
-> **Catatan:** Folder `evidence/` untuk menyimpan bukti transaksi
-> dibuat **otomatis** saat build. Tidak perlu buat manual.
 
 ---
 
@@ -130,22 +131,31 @@ curl http://localhost:8000/api/v1/health
 ### Opsi A — Otomatis via Docker (Disarankan)
 
 Database dibuat otomatis saat `docker compose up --build` pertama kali.
-FastAPI akan membuat semua tabel saat startup.
+FastAPI akan membuat semua tabel secara otomatis saat startup.
 
-### Opsi B — Manual via SQL Script
+### Opsi B — UI via pgAdmin (Mudah)
 
-Jika ingin inisialisasi manual atau migrasi ke server lain:
+1. Buka browser: `http://172.16.170.128:5050`
+2. Login menggunakan:
+   - Email: `admin@masterbarang.local`
+   - Password: `M3rakest`
+3. Tambahkan server baru dengan konfigurasi:
+   - Host name/address: `db`
+   - Port: `5432`
+   - Maintenance database: `masterbarang_db`
+   - Username: `masterbarng`
+   - Password: `M3rakest`
+
+### Opsi C — Manual via SQL Script
+
+Jika ingin inisialisasi manual:
 
 ```bash
-# Masuk ke container PostgreSQL
+# Masuk ke container PostgreSQL dan jalankan query
 sudo docker exec -it masterbarang_db psql -U masterbarng -d masterbarang_db
 
-# Di dalam psql, jalankan script:
-\i /path/to/init_database.sql
-
-# Atau dari luar container:
-sudo docker exec -i masterbarang_db psql -U masterbarng -d masterbarang_db \
-    < init_database.sql
+# Jalankan script SQL dari luar container:
+sudo docker exec -i masterbarang_db psql -U masterbarng -d masterbarang_db < init_database.sql
 ```
 
 ### Struktur Database
@@ -180,27 +190,6 @@ transactions (
 )
 ```
 
-### Query berguna di PostgreSQL
-
-```sql
--- Lihat semua barang
-SELECT id, name, serial_number, category, status FROM assets;
-
--- Barang yang sedang dipinjam
-SELECT * FROM v_borrowed_assets;
-
--- Riwayat transaksi per hari
-SELECT * FROM v_daily_transactions;
-
--- Barang kategori tertentu
-SELECT * FROM assets WHERE category = 'Perangkat Komputer';
-
--- Transaksi dengan bukti foto
-SELECT t.*, a.name FROM transactions t
-JOIN assets a ON a.id = t.asset_id
-WHERE t.evidence_filename IS NOT NULL;
-```
-
 ---
 
 ## 5. Setup Android <a name="setup-android"></a>
@@ -216,60 +205,38 @@ WHERE t.evidence_filename IS NOT NULL;
 ```
 1. Buka Android Studio
 2. File → Open → pilih folder "assettrack/android"
-3. Tunggu Gradle sync selesai (perlu internet, 3-10 menit pertama kali)
+3. Tunggu Gradle sync selesai
 4. Sambungkan HP via USB atau buka Emulator
 5. Klik tombol ▶ Run
 ```
-
-### Permission yang Diminta Pertama Kali
-- **Kamera** — untuk scan barcode dan foto bukti
-- **Lokasi** — untuk GPS lock saat transaksi
-- **Storage** — untuk simpan foto/PDF di MasterBarang/
 
 ---
 
 ## 6. Konfigurasi Koneksi Android ↔ Backend <a name="koneksi"></a>
 
-### Jika pakai Emulator Android
-
-Tidak perlu ubah apa-apa. `10.0.2.2` sudah dikonfigurasi di `build.gradle.kts`:
-
-```kotlin
-debug {
-    buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:8000/\"")
-}
-```
-
 ### Konfigurasi Jaringan Lokal (Local Network)
 
-Server: **192.168.70.86**, port API: **1626**, port DB: **3306**
+Server: **172.16.170.128**, port API: **1626**, port DB: **3306**
 
 Konfigurasi ini sudah diterapkan di `build.gradle.kts` dan `docker-compose.yml`.
-Tidak perlu mengubah apa pun — langsung build dan deploy.
 
 ```kotlin
-// android/app/build.gradle.kts — sudah terkonfigurasi
+// android/app/build.gradle.kts
 debug {
-    buildConfigField("String", "BASE_URL", "\"http://192.168.70.86:1626/\"")
+    buildConfigField("String", "BASE_URL", "\"http://172.16.170.128:1626/\"")
 }
 release {
-    buildConfigField("String", "BASE_URL", "\"http://192.168.70.86:1626/\"")
+    buildConfigField("String", "BASE_URL", "\"http://172.16.170.128:1626/\"")
 }
 ```
 
-**Langkah 3** — Izinkan port di firewall:
-```bash
-sudo ufw allow 8000/tcp
+**Penting:** Whitelist HTTP di android diatur pada file `network_security_config.xml`:
+```xml
+<!-- android/app/src/main/res/xml/network_security_config.xml -->
+<domain-config cleartextTrafficPermitted="true">
+    <domain includeSubdomains="false">172.16.170.128</domain>
+</domain-config>
 ```
-
-**Langkah 4** — Test dari browser HP:
-```
-http://192.168.1.25:8000/api/v1/health
-```
-Harus muncul: `{"status":"ok","db":"ok"}`
-
-**Langkah 5** — Rebuild app:
-Di Android Studio: **Build → Clean Project** → **▶ Run**
 
 ---
 
@@ -280,18 +247,17 @@ Di Android Studio: **Build → Clean Project** → **▶ Run**
 ```yaml
 # UBAH password database (jangan pakai default!)
 environment:
-  POSTGRES_PASSWORD: GantiDenganPasswordKuat123!
+  POSTGRES_PASSWORD: GantiDenganPasswordKuatBaru!
 
 # UBAH di service api:
 environment:
-  DATABASE_URL: postgresql+asyncpg://masterbarng:GantiDenganPasswordKuat123!@db:5432/masterbarang_db
+  DATABASE_URL: postgresql+asyncpg://masterbarng:GantiDenganPasswordKuatBaru!@db:5432/masterbarang_db
 ```
 
 ### B. Backend — Tambah HTTPS (Production)
 
-Pasang Nginx sebagai reverse proxy:
+Pasang Nginx sebagai reverse proxy ke port `1626`:
 ```nginx
-# /etc/nginx/sites-available/masterbarang
 server {
     listen 443 ssl;
     server_name api.masterbarang.com;
@@ -300,49 +266,13 @@ server {
     ssl_certificate_key /etc/ssl/private/masterbarang.key;
 
     location / {
-        proxy_pass http://localhost:8000;
+        proxy_pass http://localhost:1626;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
     }
 
-    # Untuk upload file besar (foto/PDF)
     client_max_body_size 20M;
 }
-```
-
-### C. Android — `build.gradle.kts` untuk Release
-
-```kotlin
-release {
-    isMinifyEnabled = true
-    buildConfigField(
-        "String", "BASE_URL",
-        "\"https://api.masterbarang.com/\""  // ← Ganti URL production
-    )
-}
-```
-
-### D. Android — Izin Jaringan Cleartext (Development Only)
-
-File `AndroidManifest.xml` sudah allow cleartext untuk development.
-Untuk production (HTTPS), hapus baris ini:
-```xml
-<!-- HAPUS untuk production karena HTTPS tidak butuh ini -->
-android:usesCleartextTraffic="true"
-```
-
-### E. Checklist Deployment Production
-
-```
-□ Ganti password PostgreSQL di docker-compose.yml
-□ Set BASE_URL ke HTTPS di build.gradle.kts release config
-□ Pasang SSL certificate (Let's Encrypt gratis)
-□ Setup Nginx reverse proxy
-□ Backup otomatis database PostgreSQL (cron job)
-□ Monitor disk space folder evidence/ (foto/PDF bisa besar)
-□ Generate signed APK / AAB untuk distribusi:
-  Android Studio → Build → Generate Signed Bundle/APK
-□ Hapus android:usesCleartextTraffic dari Manifest untuk production
 ```
 
 ---
@@ -353,47 +283,21 @@ android:usesCleartextTraffic="true"
 WorkManager berjalan di background secara otomatis saat ada koneksi internet.
 
 ### Manual via UI
-- **TopBar** → tap ikon `⟳` (berputar saat syncing, merah jika ada pending)
-- **Dashboard Banner** → tap tombol **"Sync"** di banner kuning
-
-### Urutan proses Sync:
-1. PUSH assets baru → `POST /api/v1/assets/batch`
-2. PUSH transaksi baru → `POST /api/v1/transactions/batch`
-3. UPLOAD file bukti → `POST /api/v1/transactions/{id}/evidence`
-4. PULL semua data dari server → `GET /api/v1/master-sync`
+- **TopBar** → tap ikon `⟳`
+- **Dashboard Banner** → tap tombol **"Sync"**
 
 ---
 
 ## 9. Upload Bukti Transaksi <a name="bukti"></a>
 
-Saat **Barang Keluar (Check-Out)**, petugas bisa melampirkan bukti:
-
 | Tipe | Sumber | Disimpan di HP | Diupload ke Server |
 |------|--------|----------------|-------------------|
 | Foto | Kamera langsung | `Downloads/MasterBarang/bukti/` | `/app/evidence/` |
-| Foto | Galeri HP | `Downloads/MasterBarang/bukti/` | `/app/evidence/` |
 | PDF  | Storage HP | `Downloads/MasterBarang/bukti/` | `/app/evidence/` |
-
-**Folder di HP:**
-```
-/storage/emulated/0/Download/MasterBarang/
-└── bukti/
-    ├── {transaction-id}.jpg
-    └── {transaction-id}.pdf
-```
-
-**Folder di Server:**
-```
-assettrack/backend/evidence/
-├── {transaction-id}.jpg
-└── {transaction-id}.pdf
-```
 
 ---
 
 ## 10. Perintah Berguna <a name="perintah-berguna"></a>
-
-### Docker
 
 ```bash
 # Jalankan semua container
@@ -402,71 +306,9 @@ sudo docker compose up -d --build
 # Stop semua container
 sudo docker compose down
 
-# Reset total (hapus semua data)
+# Reset total (HAPUS DATA DATABASE)
 sudo docker compose down -v
 
 # Lihat log real-time
 sudo docker compose logs -f
-
-# Log API saja
-sudo docker logs masterbarang_api -f
-
-# Restart hanya API setelah update kode
-sudo docker compose up -d --build api
-
-# Masuk ke database
-sudo docker exec -it masterbarang_db psql -U masterbarng -d masterbarang_db
-
-# Backup database
-sudo docker exec masterbarang_db pg_dump -U masterbarng masterbarang_db \
-    > backup_$(date +%Y%m%d).sql
-
-# Restore database
-sudo docker exec -i masterbarang_db psql -U masterbarng masterbarang_db \
-    < backup_20240101.sql
 ```
-
-### Android Studio
-
-```
-Gradle Sync:     File → Sync Project with Gradle Files
-Clean Build:     Build → Clean Project
-Run:             Shift + F10
-Logcat:          View → Tool Windows → Logcat
-Filter log:      Tag: SyncWorker ATAU Tag: AssetRepository
-```
-
----
-
-## 11. Troubleshooting <a name="troubleshooting"></a>
-
-| Masalah | Penyebab | Solusi |
-|---------|----------|--------|
-| App tidak bisa konek ke backend | IP salah atau firewall | Cek `BASE_URL` di `build.gradle.kts`, jalankan `sudo ufw allow 8000` |
-| Kamera hitam saat scan | Background thread issue | Update sudah fix ini — rebuild app |
-| Sync tidak jalan otomatis | WorkManager throttle | Tunggu 15 menit, atau tap tombol Sync manual |
-| Upload bukti gagal | File sudah dihapus | Cek folder `MasterBarang/bukti/` di HP |
-| Database error saat startup | Volume corrupt | `sudo docker compose down -v && sudo docker compose up -d --build` |
-| Port 8000 sudah dipakai | Konflik port | Ganti `"8000:8000"` ke `"8001:8000"` di `docker-compose.yml` |
-| Gradle sync gagal | Cache corrupt | Android Studio: `File → Invalidate Caches → Restart` |
-| Room database error | Schema berubah | `fallbackToDestructiveMigration()` sudah aktif — uninstall app di HP lalu install ulang |
-| Evidence folder tidak ada | Docker build belum jalan | `sudo docker compose up -d --build` ulang |
-| `python-multipart` error | Dependency hilang | Pastikan `requirements.txt` punya baris `python-multipart==0.0.9` |
-
----
-
-## API Endpoints Referensi
-
-| Method | Endpoint | Deskripsi |
-|--------|----------|-----------|
-| `GET`  | `/api/v1/health` | Cek status server dan database |
-| `GET`  | `/api/v1/master-sync?since_ms=0` | Pull semua data dari server |
-| `POST` | `/api/v1/assets/batch` | Push batch asset ke server |
-| `GET`  | `/api/v1/assets` | List semua asset |
-| `GET`  | `/api/v1/assets/{id}` | Detail satu asset |
-| `POST` | `/api/v1/transactions/batch` | Push batch transaksi ke server |
-| `GET`  | `/api/v1/transactions` | List semua transaksi |
-| `POST` | `/api/v1/transactions/{id}/evidence` | Upload bukti foto/PDF |
-| `GET`  | `/api/v1/transactions/{id}/evidence` | Download bukti |
-
-Dokumentasi interaktif: `http://localhost:8000/docs`
