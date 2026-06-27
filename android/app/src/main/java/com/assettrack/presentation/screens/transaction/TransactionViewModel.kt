@@ -189,14 +189,14 @@ class TransactionViewModel @Inject constructor(
 
     // ── Simpan bukti ke MasterBarang sebelum submit ───────────────────────────
 
-    private suspend fun saveEvidence(assetSn: String, txId: String): String? {
+    private suspend fun saveEvidence(txId: String): String? {
         val state = _uiState.value
         val uri   = state.evidenceUri ?: return null
         val type  = state.evidenceType ?: return null
 
         return when (type) {
-            "PHOTO" -> masterBarangManager.savePhotoEvidence(uri, assetSn, txId)
-            "PDF"   -> masterBarangManager.savePdfEvidence(uri, assetSn, txId)
+            "PHOTO" -> masterBarangManager.saveBuktiPhoto(uri, txId)
+            "PDF"   -> masterBarangManager.saveBuktiPdf(uri, txId)
             else    -> null
         }
     }
@@ -214,7 +214,7 @@ class TransactionViewModel @Inject constructor(
             val txId = java.util.UUID.randomUUID().toString()
             val evidencePath = if (state.evidenceUri != null) {
                 _uiState.update { it.copy(isSavingEvidence = true) }
-                val path = saveEvidence(asset.serialNumber, txId)
+                val path = saveEvidence(txId)
                 _uiState.update { it.copy(isSavingEvidence = false, savedEvidencePath = path) }
                 path
             } else null
@@ -244,11 +244,11 @@ class TransactionViewModel @Inject constructor(
                 onSuccess = { tx ->
                     _uiState.update {
                         TransactionUiState(
-                            mode      = state.mode,
+                            mode            = state.mode,
                             lastTransaction = tx,
-                            latitude  = state.latitude,
-                            longitude = state.longitude,
-                            gpsAccuracy = state.gpsAccuracy
+                            latitude        = state.latitude,
+                            longitude       = state.longitude,
+                            gpsAccuracy     = state.gpsAccuracy
                         )
                     }
                 },

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, BigInteger, Float, Boolean, Enum as SAEnum, Text, Index
+from sqlalchemy import Column, String, BigInteger, Float, Boolean, Enum as SAEnum, Text, Index, ForeignKey
 from sqlalchemy.orm import relationship
 import enum
 from app.database import Base
@@ -40,7 +40,7 @@ class Transaction(Base):
     __tablename__ = "transactions"
 
     id                  = Column(String(36),  primary_key=True)
-    asset_id            = Column(String(36),  nullable=False, index=True)
+    asset_id = Column(String(36), ForeignKey("assets.id"), nullable=False, index=True)
     asset_name          = Column(String(255), nullable=False)
     asset_serial_number = Column(String(100), nullable=False)
     type                = Column(SAEnum(TransactionType), nullable=False)

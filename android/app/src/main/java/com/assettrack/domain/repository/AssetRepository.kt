@@ -4,7 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Log
-import com.assettrack.data.local.SyncPreferences
+import com.assettrack.data.SyncPreferences
 import com.assettrack.data.local.dao.AssetDao
 import com.assettrack.data.local.dao.TransactionDao
 import com.assettrack.data.local.entity.AssetEntity
@@ -255,7 +255,8 @@ class AssetRepository @Inject constructor(
 
         // 4. PULL semua data terbaru dari server
         runCatching {
-            val lastSyncMs = if (forceFullSync) 0L else syncPrefs.getLastSync()
+
+            val lastSyncMs = if (forceFullSync) 0L else syncPrefs.getLastSyncMs()
             val resp = api.masterSync(sinceMs = lastSyncMs)
             if (resp.isSuccessful) {
                 val body = resp.body()!!
@@ -274,7 +275,7 @@ class AssetRepository @Inject constructor(
                         txPulled++
                     }
                 }
-                syncPrefs.saveLastSync(body.serverTimestampMs)
+                syncPrefs.saveLastSyncMs(body.serverTimestampMs)
                 Log.i(TAG, "Pull: $assetsPulled assets, $txPulled tx from server")
             } else errors.add("Master sync pull HTTP ${resp.code()}")
         }.onFailure { errors.add("Master sync pull: ${it.message}") }

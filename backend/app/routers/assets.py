@@ -66,6 +66,7 @@ async def sync_assets_batch(
     payload: AssetBatchRequest,
     db: AsyncSession = Depends(get_db)
 ):
+    print(">>> PAYLOAD:", payload.model_dump(), flush=True)
     synced_ids: List[str] = []
     failed_ids: List[str] = []
 

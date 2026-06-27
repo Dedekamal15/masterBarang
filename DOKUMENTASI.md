@@ -143,7 +143,7 @@ FastAPI akan membuat semua tabel secara otomatis saat startup.
    - Host name/address: `db`
    - Port: `5432`
    - Maintenance database: `masterbarang_db`
-   - Username: `masterbarng`
+   - Username: `masterbarang`
    - Password: `M3rakest`
 
 ### Opsi C — Manual via SQL Script

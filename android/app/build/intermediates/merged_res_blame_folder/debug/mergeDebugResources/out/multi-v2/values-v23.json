@@ -4,7 +4,7 @@
             "outputFile": "com.assettrack.app-mergeDebugResources-78:/values-v23/values-v23.xml",
             "map": [
                 {
-                    "source": "/home/dedekamal/.gradle/caches/transforms-4/299cc630a2880f6738153adfc4f4307a/transformed/work-runtime-2.9.0/res/values-v23/values-v23.xml",
+                    "source": "/home/dedekamal/.gradle/caches/transforms-4/28360ee0d931ef347e7935b28c2a59db/transformed/work-runtime-2.9.0/res/values-v23/values-v23.xml",
                     "from": {
                         "startLines": "2,3",
                         "startColumns": "4,4",
@@ -14,7 +14,7 @@
                     }
                 },
                 {
-                    "source": "/home/dedekamal/.gradle/caches/transforms-4/a0e5c5765ed46f1b3bfc898dde8bbc78/transformed/appcompat-1.6.1/res/values-v23/values-v23.xml",
+                    "source": "/home/dedekamal/.gradle/caches/transforms-4/49f5081dcbb3f96f4bcb464b4dd2e918/transformed/appcompat-1.6.1/res/values-v23/values-v23.xml",
                     "from": {
                         "startLines": "2,3,4,5,6,20,34,35,36,39,43,44,45,46",
                         "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4",

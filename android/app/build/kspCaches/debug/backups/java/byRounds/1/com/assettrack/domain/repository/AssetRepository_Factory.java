@@ -1,7 +1,7 @@
 package com.assettrack.domain.repository;
 
 import android.content.Context;
-import com.assettrack.data.local.SyncPreferences;
+import com.assettrack.data.SyncPreferences;
 import com.assettrack.data.local.dao.AssetDao;
 import com.assettrack.data.local.dao.TransactionDao;
 import com.assettrack.data.remote.api.AssetTrackApiService;

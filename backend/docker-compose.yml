@@ -5,16 +5,17 @@ services:
     restart: always
     environment:
       POSTGRES_DB:       masterbarang_db
-      POSTGRES_USER:     masterbarng
+      POSTGRES_USER:     masterbarang       # ✅ konsisten
       POSTGRES_PASSWORD: M3rakest
     ports:
-      - "3306:5432"    # host:container — akses dari luar pakai port 3306
+      - "3306:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
+      - ./init_database.sql:/docker-entrypoint-initdb.d/init_database.sql:ro  # ✅ tambah ini
     networks:
       - masterbarang_net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U masterbarng -d masterbarang_db"]
+      test: ["CMD-SHELL", "pg_isready -U masterbarang -d masterbarang_db"]  # ✅ fix typo
       interval: 5s
       timeout: 5s
       retries: 10
@@ -24,9 +25,9 @@ services:
     container_name: masterbarang_api
     restart: always
     ports:
-      - "1626:8000"    # host:container — akses dari luar pakai port 1626
+      - "1626:8000"
     environment:
-      DATABASE_URL: postgresql+asyncpg://masterbarng:M3rakest@db:5432/masterbarang_db
+      DATABASE_URL: postgresql+asyncpg://masterbarang:M3rakest@db:5432/masterbarang_db  # ✅ fix typo
       EVIDENCE_DIR: /app/evidence
     volumes:
       - ./evidence:/app/evidence
@@ -42,10 +43,10 @@ services:
     container_name: masterbarang_pgadmin
     restart: always
     environment:
-      PGADMIN_DEFAULT_EMAIL:    admin@masterbarang.local
+      PGADMIN_DEFAULT_EMAIL:    admin@masterbarang.com
       PGADMIN_DEFAULT_PASSWORD: M3rakest
     ports:
-      - "5050:80"      # akses pgAdmin di http://172.16.170.128:5050
+      - "5050:80"
     volumes:
       - pgadmin_data:/var/lib/pgadmin
     depends_on:
@@ -59,7 +60,7 @@ services:
     container_name: masterbarang_portainer
     restart: always
     ports:
-      - "9000:9000"    # akses Portainer di http://172.16.170.128:9000
+      - "9000:9000"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - portainer_data:/data
