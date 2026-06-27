@@ -55,6 +55,7 @@ object AppModule {
                     HttpLoggingInterceptor.Level.NONE
             }
         )
+        .addInterceptor(com.assettrack.data.remote.interceptor.GzipRequestInterceptor())
         .build()
 
     @Provides

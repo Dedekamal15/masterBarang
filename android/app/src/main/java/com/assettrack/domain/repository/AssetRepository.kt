@@ -1,6 +1,10 @@
 package com.assettrack.domain.repository
 
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.util.Log
+import com.assettrack.data.local.SyncPreferences
 import com.assettrack.data.local.dao.AssetDao
 import com.assettrack.data.local.dao.TransactionDao
 import com.assettrack.data.local.entity.AssetEntity
@@ -14,9 +18,11 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.File
+import java.io.FileOutputStream
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
+import dagger.hilt.android.qualifiers.ApplicationContext
 
 data class BulkImportResult(val successCount: Int, val errors: List<String>)
 
@@ -33,7 +39,9 @@ data class SyncResult(
 class AssetRepository @Inject constructor(
     private val assetDao: AssetDao,
     private val transactionDao: TransactionDao,
-    private val api: AssetTrackApiService
+    private val api: AssetTrackApiService,
+    @ApplicationContext private val context: Context,
+    private val syncPrefs: SyncPreferences
 ) {
     companion object { private const val TAG = "AssetRepository" }
 
@@ -172,7 +180,7 @@ class AssetRepository @Inject constructor(
 
     // ── Full Sync ─────────────────────────────────────────────────────────────
 
-    suspend fun syncPendingData(): SyncResult {
+    suspend fun syncPendingData(forceFullSync: Boolean = false): SyncResult {
         var assetsSynced = 0; var txSynced = 0
         var evidenceUploaded = 0; var assetsPulled = 0; var txPulled = 0
         val errors = mutableListOf<String>()
@@ -180,33 +188,37 @@ class AssetRepository @Inject constructor(
         // 1. PUSH assets yang belum sync
         val pendingAssets = assetDao.getPending()
         if (pendingAssets.isNotEmpty()) {
-            runCatching {
-                val resp = api.syncAssets(AssetBatchDto(pendingAssets.map { it.toDto() }))
-                if (resp.isSuccessful) {
-                    val body = resp.body()!!
-                    val failSet = body.failedIds.toSet()
-                    val okIds = pendingAssets.map { it.id }.filterNot { it in failSet }
-                    if (okIds.isNotEmpty()) assetDao.markSynced(okIds)
-                    assetsSynced = okIds.size
-                    errors.addAll(body.failedIds.map { "Asset push failed: $it" })
-                } else errors.add("Assets push HTTP ${resp.code()}")
-            }.onFailure { errors.add("Assets push: ${it.message}") }
+            pendingAssets.chunked(50).forEach { chunk ->
+                runCatching {
+                    val resp = api.syncAssets(AssetBatchDto(chunk.map { it.toDto() }))
+                    if (resp.isSuccessful) {
+                        val body = resp.body()!!
+                        val failSet = body.failedIds.toSet()
+                        val okIds = chunk.map { it.id }.filterNot { it in failSet }
+                        if (okIds.isNotEmpty()) assetDao.markSynced(okIds)
+                        assetsSynced += okIds.size
+                        errors.addAll(body.failedIds.map { "Asset push failed: $it" })
+                    } else errors.add("Assets push HTTP ${resp.code()}")
+                }.onFailure { errors.add("Assets push: ${it.message}") }
+            }
         }
 
         // 2. PUSH transactions yang belum sync
         val pendingTx = transactionDao.getPending()
         if (pendingTx.isNotEmpty()) {
-            runCatching {
-                val resp = api.syncTransactions(TransactionBatchDto(pendingTx.map { it.toDto() }))
-                if (resp.isSuccessful) {
-                    val body = resp.body()!!
-                    val failSet = body.failedIds.toSet()
-                    val okIds = pendingTx.map { it.id }.filterNot { it in failSet }
-                    if (okIds.isNotEmpty()) transactionDao.markSynced(okIds)
-                    txSynced = okIds.size
-                    errors.addAll(body.failedIds.map { "TX push failed: $it" })
-                } else errors.add("TX push HTTP ${resp.code()}")
-            }.onFailure { errors.add("TX push: ${it.message}") }
+            pendingTx.chunked(50).forEach { chunk ->
+                runCatching {
+                    val resp = api.syncTransactions(TransactionBatchDto(chunk.map { it.toDto() }))
+                    if (resp.isSuccessful) {
+                        val body = resp.body()!!
+                        val failSet = body.failedIds.toSet()
+                        val okIds = chunk.map { it.id }.filterNot { it in failSet }
+                        if (okIds.isNotEmpty()) transactionDao.markSynced(okIds)
+                        txSynced += okIds.size
+                        errors.addAll(body.failedIds.map { "TX push failed: $it" })
+                    } else errors.add("TX push HTTP ${resp.code()}")
+                }.onFailure { errors.add("TX push: ${it.message}") }
+            }
         }
 
         // 3. UPLOAD evidence files yang belum diupload
@@ -221,20 +233,30 @@ class AssetRepository @Inject constructor(
             }
             runCatching {
                 val mimeType = if (tx.evidenceType == "PDF") "application/pdf" else "image/jpeg"
-                val reqBody = file.asRequestBody(mimeType.toMediaTypeOrNull())
-                val part = MultipartBody.Part.createFormData("file", file.name, reqBody)
+                var uploadFile = file
+                if (tx.evidenceType != "PDF") {
+                    uploadFile = compressImage(file)
+                }
+
+                val reqBody = uploadFile.asRequestBody(mimeType.toMediaTypeOrNull())
+                val part = MultipartBody.Part.createFormData("file", uploadFile.name, reqBody)
                 val resp = api.uploadEvidence(tx.id, part)
                 if (resp.isSuccessful) {
                     transactionDao.markEvidenceUploaded(tx.id)
                     evidenceUploaded++
                     Log.i(TAG, "Evidence uploaded: ${tx.id}")
                 } else errors.add("Evidence upload HTTP ${resp.code()} tx=${tx.id}")
+
+                if (uploadFile != file && uploadFile.exists()) {
+                    uploadFile.delete() // cleanup compressed file
+                }
             }.onFailure { errors.add("Evidence upload: ${it.message}") }
         }
 
         // 4. PULL semua data terbaru dari server
         runCatching {
-            val resp = api.masterSync(sinceMs = 0)
+            val lastSyncMs = if (forceFullSync) 0L else syncPrefs.getLastSync()
+            val resp = api.masterSync(sinceMs = lastSyncMs)
             if (resp.isSuccessful) {
                 val body = resp.body()!!
                 // Update/insert assets dari server
@@ -252,11 +274,49 @@ class AssetRepository @Inject constructor(
                         txPulled++
                     }
                 }
+                syncPrefs.saveLastSync(body.serverTimestampMs)
                 Log.i(TAG, "Pull: $assetsPulled assets, $txPulled tx from server")
             } else errors.add("Master sync pull HTTP ${resp.code()}")
         }.onFailure { errors.add("Master sync pull: ${it.message}") }
 
         return SyncResult(assetsSynced, txSynced, evidenceUploaded, assetsPulled, txPulled, errors)
+    }
+
+    private fun compressImage(originalFile: File): File {
+        return try {
+            val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(originalFile.absolutePath, options)
+            
+            options.inSampleSize = calculateInSampleSize(options, 1280, 1280)
+            options.inJustDecodeBounds = false
+            
+            val bitmap = BitmapFactory.decodeFile(originalFile.absolutePath, options)
+                ?: return originalFile
+            val outputFile = File(context.cacheDir, "compressed_${originalFile.name}")
+            
+            FileOutputStream(outputFile).use { out ->
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 80, out)
+            }
+            bitmap.recycle()
+            outputFile
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to compress image, fallback to original: ${e.message}", e)
+            originalFile
+        }
+    }
+
+    private fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
+        val (height: Int, width: Int) = options.outHeight to options.outWidth
+        var inSampleSize = 1
+
+        if (height > reqHeight || width > reqWidth) {
+            val halfHeight: Int = height / 2
+            val halfWidth: Int = width / 2
+            while (halfHeight / inSampleSize >= reqHeight && halfWidth / inSampleSize >= reqWidth) {
+                inSampleSize *= 2
+            }
+        }
+        return inSampleSize
     }
 }
 
