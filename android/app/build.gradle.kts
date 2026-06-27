@@ -21,11 +21,13 @@ android {
 
     buildTypes {
         debug {
-            buildConfigField("String", "BASE_URL", "\"http://172.16.170.128:1626/\"")
+            buildConfigField("String", "BASE_URL", "\"http://10.10.128.204:1626/\"")
         }
         release {
             isMinifyEnabled = false
+            buildConfigField("String", "SERVER_HOST", "\"172.16.170.128\"")
             buildConfigField("String", "BASE_URL", "\"http://172.16.170.128:1626/\"")
+            buildConfigField("Int", "SERVER_PORT", "1626")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -99,7 +101,7 @@ dependencies {
     // Permissions
     implementation(libs.accompanist.permissions)
 
-    // Image loading (untuk preview foto bukti)
+    // Image loading
     implementation(libs.coil)
 
     // DataStore

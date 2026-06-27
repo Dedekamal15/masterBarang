@@ -1,14 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
     <!--
-        Izinkan HTTP (cleartext) ke IP server lokal.
-        Android 9+ memblokir HTTP secara default — file ini mengizinkannya
-        khusus untuk IP 192.168.70.86 saja (lebih aman dari allow semua).
+        Izinkan HTTP (cleartext) ke server lokal.
+        Tambahkan IP lain di sini kalau server pindah.
     -->
     <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="false">192.168.70.86</domain>
+        <domain includeSubdomains="false">10.10.128.204</domain>
     </domain-config>
 
-    <!-- Semua traffic lain tetap wajib HTTPS -->
+    <!-- Semua koneksi lain tetap wajib HTTPS -->
     <base-config cleartextTrafficPermitted="false" />
 </network-security-config>
