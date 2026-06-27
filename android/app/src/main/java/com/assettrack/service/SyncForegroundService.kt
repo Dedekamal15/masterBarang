@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import com.assettrack.BuildConfig
 import com.assettrack.R
 import com.assettrack.domain.repository.AssetRepository
 import dagger.hilt.android.AndroidEntryPoint

@@ -1,5 +1,7 @@
 package com.assettrack.domain.repository;
 
+import android.content.Context;
+import com.assettrack.data.local.SyncPreferences;
 import com.assettrack.data.local.dao.AssetDao;
 import com.assettrack.data.local.dao.TransactionDao;
 import com.assettrack.data.remote.api.AssetTrackApiService;
@@ -11,7 +13,7 @@ import javax.annotation.processing.Generated;
 import javax.inject.Provider;
 
 @ScopeMetadata("javax.inject.Singleton")
-@QualifierMetadata
+@QualifierMetadata("dagger.hilt.android.qualifiers.ApplicationContext")
 @DaggerGenerated
 @Generated(
     value = "dagger.internal.codegen.ComponentProcessor",
@@ -31,25 +33,33 @@ public final class AssetRepository_Factory implements Factory<AssetRepository> {
 
   private final Provider<AssetTrackApiService> apiProvider;
 
+  private final Provider<Context> contextProvider;
+
+  private final Provider<SyncPreferences> syncPrefsProvider;
+
   public AssetRepository_Factory(Provider<AssetDao> assetDaoProvider,
-      Provider<TransactionDao> transactionDaoProvider, Provider<AssetTrackApiService> apiProvider) {
+      Provider<TransactionDao> transactionDaoProvider, Provider<AssetTrackApiService> apiProvider,
+      Provider<Context> contextProvider, Provider<SyncPreferences> syncPrefsProvider) {
     this.assetDaoProvider = assetDaoProvider;
     this.transactionDaoProvider = transactionDaoProvider;
     this.apiProvider = apiProvider;
+    this.contextProvider = contextProvider;
+    this.syncPrefsProvider = syncPrefsProvider;
   }
 
   @Override
   public AssetRepository get() {
-    return newInstance(assetDaoProvider.get(), transactionDaoProvider.get(), apiProvider.get());
+    return newInstance(assetDaoProvider.get(), transactionDaoProvider.get(), apiProvider.get(), contextProvider.get(), syncPrefsProvider.get());
   }
 
   public static AssetRepository_Factory create(Provider<AssetDao> assetDaoProvider,
-      Provider<TransactionDao> transactionDaoProvider, Provider<AssetTrackApiService> apiProvider) {
-    return new AssetRepository_Factory(assetDaoProvider, transactionDaoProvider, apiProvider);
+      Provider<TransactionDao> transactionDaoProvider, Provider<AssetTrackApiService> apiProvider,
+      Provider<Context> contextProvider, Provider<SyncPreferences> syncPrefsProvider) {
+    return new AssetRepository_Factory(assetDaoProvider, transactionDaoProvider, apiProvider, contextProvider, syncPrefsProvider);
   }
 
   public static AssetRepository newInstance(AssetDao assetDao, TransactionDao transactionDao,
-      AssetTrackApiService api) {
-    return new AssetRepository(assetDao, transactionDao, api);
+      AssetTrackApiService api, Context context, SyncPreferences syncPrefs) {
+    return new AssetRepository(assetDao, transactionDao, api, context, syncPrefs);
   }
 }

@@ -17,6 +17,7 @@ import com.assettrack.data.CsvParser;
 import com.assettrack.data.LocationHelper;
 import com.assettrack.data.MasterBarangManager;
 import com.assettrack.data.local.AssetTrackDatabase;
+import com.assettrack.data.local.SyncPreferences;
 import com.assettrack.data.local.dao.AssetDao;
 import com.assettrack.data.local.dao.TransactionDao;
 import com.assettrack.data.remote.api.AssetTrackApiService;
@@ -424,25 +425,25 @@ public final class DaggerAssetTrackApp_HiltComponents_SingletonC {
 
     @IdentifierNameString
     private static final class LazyClassKeyProvider {
-      static String com_assettrack_presentation_screens_dashboard_DashboardViewModel = "com.assettrack.presentation.screens.dashboard.DashboardViewModel";
-
       static String com_assettrack_presentation_screens_transaction_TransactionViewModel = "com.assettrack.presentation.screens.transaction.TransactionViewModel";
-
-      static String com_assettrack_presentation_screens_history_HistoryViewModel = "com.assettrack.presentation.screens.history.HistoryViewModel";
 
       static String com_assettrack_presentation_screens_registration_RegistrationViewModel = "com.assettrack.presentation.screens.registration.RegistrationViewModel";
 
-      @KeepFieldType
-      DashboardViewModel com_assettrack_presentation_screens_dashboard_DashboardViewModel2;
+      static String com_assettrack_presentation_screens_history_HistoryViewModel = "com.assettrack.presentation.screens.history.HistoryViewModel";
+
+      static String com_assettrack_presentation_screens_dashboard_DashboardViewModel = "com.assettrack.presentation.screens.dashboard.DashboardViewModel";
 
       @KeepFieldType
       TransactionViewModel com_assettrack_presentation_screens_transaction_TransactionViewModel2;
 
       @KeepFieldType
+      RegistrationViewModel com_assettrack_presentation_screens_registration_RegistrationViewModel2;
+
+      @KeepFieldType
       HistoryViewModel com_assettrack_presentation_screens_history_HistoryViewModel2;
 
       @KeepFieldType
-      RegistrationViewModel com_assettrack_presentation_screens_registration_RegistrationViewModel2;
+      DashboardViewModel com_assettrack_presentation_screens_dashboard_DashboardViewModel2;
     }
   }
 
@@ -492,16 +493,13 @@ public final class DaggerAssetTrackApp_HiltComponents_SingletonC {
 
     @IdentifierNameString
     private static final class LazyClassKeyProvider {
-      static String com_assettrack_presentation_screens_history_HistoryViewModel = "com.assettrack.presentation.screens.history.HistoryViewModel";
-
       static String com_assettrack_presentation_screens_dashboard_DashboardViewModel = "com.assettrack.presentation.screens.dashboard.DashboardViewModel";
 
       static String com_assettrack_presentation_screens_transaction_TransactionViewModel = "com.assettrack.presentation.screens.transaction.TransactionViewModel";
 
       static String com_assettrack_presentation_screens_registration_RegistrationViewModel = "com.assettrack.presentation.screens.registration.RegistrationViewModel";
 
-      @KeepFieldType
-      HistoryViewModel com_assettrack_presentation_screens_history_HistoryViewModel2;
+      static String com_assettrack_presentation_screens_history_HistoryViewModel = "com.assettrack.presentation.screens.history.HistoryViewModel";
 
       @KeepFieldType
       DashboardViewModel com_assettrack_presentation_screens_dashboard_DashboardViewModel2;
@@ -511,6 +509,9 @@ public final class DaggerAssetTrackApp_HiltComponents_SingletonC {
 
       @KeepFieldType
       RegistrationViewModel com_assettrack_presentation_screens_registration_RegistrationViewModel2;
+
+      @KeepFieldType
+      HistoryViewModel com_assettrack_presentation_screens_history_HistoryViewModel2;
     }
 
     private static final class SwitchingProvider<T> implements Provider<T> {
@@ -645,6 +646,8 @@ public final class DaggerAssetTrackApp_HiltComponents_SingletonC {
 
     private Provider<AssetTrackApiService> provideApiServiceProvider;
 
+    private Provider<SyncPreferences> syncPreferencesProvider;
+
     private Provider<AssetRepository> assetRepositoryProvider;
 
     private Provider<MasterBarangManager> masterBarangManagerProvider;
@@ -686,12 +689,13 @@ public final class DaggerAssetTrackApp_HiltComponents_SingletonC {
       this.provideOkHttpClientProvider = DoubleCheck.provider(new SwitchingProvider<OkHttpClient>(singletonCImpl, 5));
       this.provideRetrofitProvider = DoubleCheck.provider(new SwitchingProvider<Retrofit>(singletonCImpl, 4));
       this.provideApiServiceProvider = DoubleCheck.provider(new SwitchingProvider<AssetTrackApiService>(singletonCImpl, 3));
+      this.syncPreferencesProvider = DoubleCheck.provider(new SwitchingProvider<SyncPreferences>(singletonCImpl, 6));
       this.assetRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<AssetRepository>(singletonCImpl, 1));
-      this.masterBarangManagerProvider = DoubleCheck.provider(new SwitchingProvider<MasterBarangManager>(singletonCImpl, 6));
+      this.masterBarangManagerProvider = DoubleCheck.provider(new SwitchingProvider<MasterBarangManager>(singletonCImpl, 7));
       this.syncWorker_AssistedFactoryProvider = SingleCheck.provider(new SwitchingProvider<SyncWorker_AssistedFactory>(singletonCImpl, 0));
-      this.provideWorkManagerProvider = DoubleCheck.provider(new SwitchingProvider<WorkManager>(singletonCImpl, 7));
-      this.csvParserProvider = DoubleCheck.provider(new SwitchingProvider<CsvParser>(singletonCImpl, 8));
-      this.locationHelperProvider = DoubleCheck.provider(new SwitchingProvider<LocationHelper>(singletonCImpl, 9));
+      this.provideWorkManagerProvider = DoubleCheck.provider(new SwitchingProvider<WorkManager>(singletonCImpl, 8));
+      this.csvParserProvider = DoubleCheck.provider(new SwitchingProvider<CsvParser>(singletonCImpl, 9));
+      this.locationHelperProvider = DoubleCheck.provider(new SwitchingProvider<LocationHelper>(singletonCImpl, 10));
     }
 
     @Override
@@ -743,7 +747,7 @@ public final class DaggerAssetTrackApp_HiltComponents_SingletonC {
           };
 
           case 1: // com.assettrack.domain.repository.AssetRepository 
-          return (T) new AssetRepository(singletonCImpl.assetDao(), singletonCImpl.transactionDao(), singletonCImpl.provideApiServiceProvider.get());
+          return (T) new AssetRepository(singletonCImpl.assetDao(), singletonCImpl.transactionDao(), singletonCImpl.provideApiServiceProvider.get(), ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule), singletonCImpl.syncPreferencesProvider.get());
 
           case 2: // com.assettrack.data.local.AssetTrackDatabase 
           return (T) AppModule_ProvideDatabaseFactory.provideDatabase(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
@@ -757,16 +761,19 @@ public final class DaggerAssetTrackApp_HiltComponents_SingletonC {
           case 5: // okhttp3.OkHttpClient 
           return (T) AppModule_ProvideOkHttpClientFactory.provideOkHttpClient();
 
-          case 6: // com.assettrack.data.MasterBarangManager 
+          case 6: // com.assettrack.data.local.SyncPreferences 
+          return (T) new SyncPreferences(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
+
+          case 7: // com.assettrack.data.MasterBarangManager 
           return (T) new MasterBarangManager(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
 
-          case 7: // androidx.work.WorkManager 
+          case 8: // androidx.work.WorkManager 
           return (T) AppModule_ProvideWorkManagerFactory.provideWorkManager(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
 
-          case 8: // com.assettrack.data.CsvParser 
+          case 9: // com.assettrack.data.CsvParser 
           return (T) new CsvParser(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
 
-          case 9: // com.assettrack.data.LocationHelper 
+          case 10: // com.assettrack.data.LocationHelper 
           return (T) new LocationHelper(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
 
           default: throw new AssertionError(id);

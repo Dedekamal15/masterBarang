@@ -19,19 +19,35 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    buildTypes {
-        debug {
-            buildConfigField("String", "BASE_URL", "\"http://10.10.128.204:1626/\"")
-        }
-        release {
-            isMinifyEnabled = false
+    android {
+        namespace = "com.assettrack"
+        compileSdk = 35
+
+        defaultConfig {
+            applicationId = "com.assettrack"
+            minSdk = 26
+            targetSdk = 35
+            versionCode = 1
+            versionName = "1.0.0"
+            testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+            // ← Pindah ke sini, tersedia di debug maupun release
             buildConfigField("String", "SERVER_HOST", "\"172.16.170.128\"")
-            buildConfigField("String", "BASE_URL", "\"http://172.16.170.128:1626/\"")
-            buildConfigField("Int", "SERVER_PORT", "1626")
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
+            buildConfigField("int",    "SERVER_PORT", "1626")
+        }
+
+        buildTypes {
+            debug {
+                buildConfigField("String", "BASE_URL", "\"http://172.16.170.128:1626/\"")
+            }
+            release {
+                isMinifyEnabled = false
+                buildConfigField("String", "BASE_URL", "\"http://172.16.170.128:1626/\"")
+                proguardFiles(
+                    getDefaultProguardFile("proguard-android-optimize.txt"),
+                    "proguard-rules.pro"
+                )
+            }
         }
     }
 
@@ -103,6 +119,7 @@ dependencies {
 
     // Image loading
     implementation(libs.coil)
+    implementation(libs.androidx.exifinterface)
 
     // DataStore
     implementation(libs.datastore.preferences)

@@ -5,7 +5,7 @@
         Tambahkan IP lain di sini kalau server pindah.
     -->
     <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="false">10.10.128.204</domain>
+        <domain includeSubdomains="true">172.16.170.128</domain>
     </domain-config>
 
     <!-- Semua koneksi lain tetap wajib HTTPS -->

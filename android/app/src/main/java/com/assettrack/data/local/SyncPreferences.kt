@@ -1,4 +1,4 @@
-package com.assettrack.data.local
+package com.assettrack.data
 
 import android.content.Context
 import androidx.datastore.core.DataStore
@@ -6,31 +6,40 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
-private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "sync_prefs")
+private val Context.dataStore: DataStore<Preferences>
+    by preferencesDataStore(name = "sync_prefs")
 
 @Singleton
 class SyncPreferences @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     companion object {
-        private val LAST_SYNC_TIMESTAMP_MS = longPreferencesKey("last_sync_timestamp_ms")
+        private val KEY_LAST_SYNC_MS = longPreferencesKey("last_sync_timestamp_ms")
     }
 
-    suspend fun getLastSync(): Long {
-        return context.dataStore.data.map { preferences ->
-            preferences[LAST_SYNC_TIMESTAMP_MS] ?: 0L
-        }.first()
+    /** Timestamp (epoch ms) terakhir kali pull berhasil dari server. 0 = belum pernah sync. */
+    suspend fun getLastSyncMs(): Long =
+        context.dataStore.data
+            .map { it[KEY_LAST_SYNC_MS] ?: 0L }
+            .first()
+
+    /** Simpan timestamp setelah pull berhasil. */
+    suspend fun saveLastSyncMs(timestampMs: Long) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_LAST_SYNC_MS] = timestampMs
+        }
     }
 
-    suspend fun saveLastSync(timestamp: Long) {
-        context.dataStore.edit { preferences ->
-            preferences[LAST_SYNC_TIMESTAMP_MS] = timestamp
+    /** Reset — paksa full sync di berikutnya. */
+    suspend fun reset() {
+        context.dataStore.edit { prefs ->
+            prefs.remove(KEY_LAST_SYNC_MS)
         }
     }
 }

@@ -1,130 +1,121 @@
 package com.assettrack.data
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Environment
+import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import java.util.*
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * Mengelola folder MasterBarang di direktori publik Downloads HP.
- *
- * Struktur folder:
- * /storage/emulated/0/Downloads/MasterBarang/
- * ├── assets/          ← export CSV daftar aset
- * ├── bukti/           ← foto & PDF bukti transaksi
- * │   ├── TRX-20240101-120000-[assetSN].jpg
- * │   └── TRX-20240101-120000-[assetSN].pdf
- * └── export/          ← export laporan
- */
 @Singleton
 class MasterBarangManager @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val imageCompressor: ImageCompressor   // ← inject compressor
 ) {
-    // Root folder MasterBarang di Downloads (accessible tanpa izin khusus di Android 10+)
-    val rootDir: File by lazy {
-        File(
+    companion object {
+        private const val TAG       = "MasterBarangManager"
+        private const val ROOT_DIR  = "MasterBarang"
+        private const val BUKTI_DIR = "bukti"
+    }
+
+    /** Root folder: Downloads/MasterBarang/ */
+    private fun getRootDir(): File {
+        val dir = File(
             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
-            "MasterBarang"
-        ).also { it.mkdirs() }
+            ROOT_DIR
+        )
+        dir.mkdirs()
+        return dir
     }
 
-    val buktiDir: File by lazy { File(rootDir, "bukti").also { it.mkdirs() } }
-    val assetsDir: File by lazy { File(rootDir, "assets").also { it.mkdirs() } }
-    val exportDir: File by lazy { File(rootDir, "export").also { it.mkdirs() } }
-
-    // ── Simpan foto bukti transaksi ───────────────────────────────────────────
+    /** Folder bukti: Downloads/MasterBarang/bukti/ */
+    private fun getBuktiDir(): File {
+        val dir = File(getRootDir(), BUKTI_DIR)
+        dir.mkdirs()
+        return dir
+    }
 
     /**
-     * Simpan foto dari URI kamera ke MasterBarang/bukti/
-     * Return: path absolut file yang disimpan, atau null jika gagal
+     * Simpan foto dari URI kamera/galeri ke MasterBarang/bukti/.
+     * ✅ Foto dikompres otomatis sebelum disimpan (resize + JPEG 75%).
+     *
+     * @return path file yang tersimpan, atau null jika gagal
      */
-    suspend fun savePhotoEvidence(
-        sourceUri: Uri,
-        assetSerialNumber: String,
-        transactionId: String
-    ): String? = withContext(Dispatchers.IO) {
-        try {
-            val timestamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.getDefault()).format(Date())
-            val fileName = "TRX-${timestamp}-${assetSerialNumber.take(12)}.jpg"
-            val destFile = File(buktiDir, fileName)
+    suspend fun saveBuktiPhoto(sourceUri: Uri, transactionId: String): String? =
+        withContext(Dispatchers.IO) {
+            try {
+                val fileName = "${transactionId}.jpg"
+                val destFile = File(getBuktiDir(), fileName)
 
-            context.contentResolver.openInputStream(sourceUri)?.use { input ->
-                // Compress bitmap untuk hemat storage
-                val bitmap = BitmapFactory.decodeStream(input)
-                FileOutputStream(destFile).use { output ->
-                    bitmap.compress(Bitmap.CompressFormat.JPEG, 85, output)
+                // ✅ Kompres foto sebelum simpan
+                val result = imageCompressor.compress(sourceUri, destFile)
+                if (result != null) {
+                    Log.i(TAG, "Foto tersimpan: ${result.absolutePath} (${result.length() / 1024}KB)")
+                    result.absolutePath
+                } else {
+                    // Fallback: copy tanpa kompres jika kompres gagal
+                    Log.w(TAG, "Kompres gagal, copy langsung")
+                    copyFromUri(sourceUri, destFile)
                 }
+            } catch (e: Exception) {
+                Log.e(TAG, "Gagal simpan foto: ${e.message}", e)
+                null
             }
-
-            if (destFile.exists()) destFile.absolutePath else null
-        } catch (e: Exception) {
-            null
         }
-    }
 
     /**
-     * Simpan PDF bukti dari URI file picker ke MasterBarang/bukti/
+     * Simpan PDF dari URI ke MasterBarang/bukti/.
+     * PDF tidak dikompres karena sudah compressed.
+     *
+     * @return path file yang tersimpan, atau null jika gagal
      */
-    suspend fun savePdfEvidence(
-        sourceUri: Uri,
-        assetSerialNumber: String,
-        transactionId: String
-    ): String? = withContext(Dispatchers.IO) {
-        try {
-            val timestamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.getDefault()).format(Date())
-            val fileName = "TRX-${timestamp}-${assetSerialNumber.take(12)}.pdf"
-            val destFile = File(buktiDir, fileName)
-
-            context.contentResolver.openInputStream(sourceUri)?.use { input ->
-                FileOutputStream(destFile).use { output ->
-                    input.copyTo(output)
-                }
+    suspend fun saveBuktiPdf(sourceUri: Uri, transactionId: String): String? =
+        withContext(Dispatchers.IO) {
+            try {
+                val fileName = "${transactionId}.pdf"
+                val destFile = File(getBuktiDir(), fileName)
+                copyFromUri(sourceUri, destFile)
+            } catch (e: Exception) {
+                Log.e(TAG, "Gagal simpan PDF: ${e.message}", e)
+                null
             }
-
-            if (destFile.exists()) destFile.absolutePath else null
-        } catch (e: Exception) {
-            null
         }
-    }
 
     /**
-     * Export daftar aset ke CSV di MasterBarang/assets/
-     */
-    suspend fun exportAssetsCsv(csvContent: String): String? = withContext(Dispatchers.IO) {
-        try {
-            val timestamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.getDefault()).format(Date())
-            val file = File(assetsDir, "DaftarAset-$timestamp.csv")
-            file.writeText(csvContent)
-            file.absolutePath
-        } catch (e: Exception) {
-            null
-        }
-    }
-
-    /**
-     * List semua file bukti yang ada
-     */
-    fun listEvidenceFiles(): List<File> =
-        buktiDir.listFiles()?.sortedByDescending { it.lastModified() } ?: emptyList()
-
-    /**
-     * Hapus file bukti lama (lebih dari 90 hari) untuk hemat storage
+     * Hapus file bukti lama yang lebih dari [olderThanDays] hari.
+     * Dipanggil oleh SyncWorker setelah sync berhasil.
      */
     suspend fun cleanOldFiles(olderThanDays: Int = 90) = withContext(Dispatchers.IO) {
-        val threshold = System.currentTimeMillis() - (olderThanDays * 24 * 60 * 60 * 1000L)
-        buktiDir.listFiles()
-            ?.filter { it.lastModified() < threshold }
-            ?.forEach { it.delete() }
+        try {
+            val cutoff = System.currentTimeMillis() - (olderThanDays.toLong() * 24 * 60 * 60 * 1000)
+            val deleted = getBuktiDir().listFiles()
+                ?.filter { it.lastModified() < cutoff }
+                ?.count { it.delete() } ?: 0
+            if (deleted > 0) Log.i(TAG, "Hapus $deleted file bukti lama (>$olderThanDays hari)")
+        } catch (e: Exception) {
+            Log.e(TAG, "cleanOldFiles error: ${e.message}")
+        }
+    }
+
+    /** Cek apakah file bukti ada di lokal */
+    fun fileExists(filePath: String): Boolean = File(filePath).exists()
+
+    /** Copy file dari content URI ke destination file */
+    private fun copyFromUri(uri: Uri, dest: File): String? {
+        dest.parentFile?.mkdirs()
+        context.contentResolver.openInputStream(uri)?.use { input ->
+            FileOutputStream(dest).use { output ->
+                input.copyTo(output)
+            }
+        }
+        return if (dest.exists()) dest.absolutePath else null
     }
 }
