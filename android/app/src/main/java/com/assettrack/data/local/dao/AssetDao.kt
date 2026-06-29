@@ -13,6 +13,9 @@ interface AssetDao {
     @Query("SELECT * FROM assets WHERE id = :id")
     suspend fun getById(id: String): AssetEntity?
 
+    @Query("SELECT id FROM assets WHERE id IN (:ids)")
+    suspend fun getExistingIds(ids: List<String>): List<String>
+
     @Query("SELECT * FROM assets WHERE serialNumber = :sn LIMIT 1")
     suspend fun findBySerialNumber(sn: String): AssetEntity?
 
@@ -42,7 +45,7 @@ interface AssetDao {
     @Query("UPDATE assets SET isSynced = 1 WHERE id IN (:ids)")
     suspend fun markSynced(ids: List<String>)
 
-    @Query("UPDATE assets SET status = :status, updatedAt = :now WHERE id = :id")
+    @Query("UPDATE assets SET status = :status, updatedAt = :now, isSynced = 0 WHERE id = :id")
     suspend fun updateStatus(id: String, status: String, now: Long = System.currentTimeMillis())
 
     @Delete

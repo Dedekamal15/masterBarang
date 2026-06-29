@@ -1,0 +1,84 @@
+# ====================================================================
+# AssetTrack Web — Docker Compose (Flexible untuk semua skenario)
+# ====================================================================
+# Cara pakai:
+#   1. Copy .env.example ke .env
+#   2. Sesuaikan value di .env sesuai skenario deploy
+#   3. docker compose up -d --build
+# ====================================================================
+
+services:
+  # ── Database ──────────────────────────────────────────────────
+  # Hanya aktif jika ENABLE_DB=true (untuk skenario standalone)
+  db:
+    profiles: ["db"]
+    image: postgres:16-alpine
+    container_name: ${DB_CONTAINER_NAME:-assettrack_db}
+    restart: always
+    environment:
+      POSTGRES_DB: ${DB_NAME:-masterbarang_db}
+      POSTGRES_USER: ${DB_USER:-masterbarang}
+      POSTGRES_PASSWORD: ${DB_PASS:-M3rakest}
+    ports:
+      - "${DB_PORT_MAPPED:-5432}:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ${DB_INIT_SQL:-../backend/init_database.sql}:/docker-entrypoint-initdb.d/init_database.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-masterbarang} -d ${DB_NAME:-masterbarang_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - assettrack_net
+
+  # ── Express API ───────────────────────────────────────────────
+  web-api:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: ${API_CONTAINER_NAME:-assettrack_web_api}
+    restart: always
+    ports:
+      - "${API_PORT:-3001}:3001"
+    environment:
+      PORT: 3001
+      DB_HOST: ${DB_HOST:-masterbarang_db}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-masterbarang}
+      DB_PASS: ${DB_PASS:-M3rakest}
+      DB_NAME: ${DB_NAME:-masterbarang_db}
+      EVIDENCE_DIR: ${EVIDENCE_DIR:-/app/evidence}
+      CORS_ORIGIN: ${CORS_ORIGIN:-"*"}
+    volumes:
+      - ${EVIDENCE_HOST_PATH:-../backend/evidence}:${EVIDENCE_DIR:-/app/evidence}
+    networks:
+      - assettrack_net
+    # depends_on untuk db hanya jika db satu compose
+    # Di skenario same-server, db sudah jalan terpisah
+
+  # ── Frontend (Nginx) ──────────────────────────────────────────
+  web-client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: ${CLIENT_CONTAINER_NAME:-assettrack_web_client}
+    restart: always
+    ports:
+      - "${CLIENT_PORT:-2926}:80"
+    networks:
+      - assettrack_net
+    depends_on:
+      - web-api
+
+networks:
+  assettrack_net:
+    name: ${NETWORK_NAME:-assettrack_web_net}
+    driver: bridge
+    # Jika external=true, network harus sudah ada (dibuat oleh stack lain)
+    # Jika external=false, compose akan membuat network baru
+    external: ${NETWORK_EXTERNAL:-false}
+
+volumes:
+  pg_data:
+    driver: local

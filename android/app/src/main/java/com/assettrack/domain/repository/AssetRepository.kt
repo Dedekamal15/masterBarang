@@ -260,17 +260,22 @@ class AssetRepository @Inject constructor(
             val resp = api.masterSync(sinceMs = lastSyncMs)
             if (resp.isSuccessful) {
                 val body = resp.body()!!
-                // Update/insert assets dari server
+                // Bulk check: cari asset yang belum ada di lokal (1 query total, bukan N)
+                val existingAssetIds = assetDao.getExistingIds(
+                    body.assets.map { it.id }
+                ).toSet()
                 for (dto in body.assets) {
-                    val local = assetDao.getById(dto.id)
-                    if (local == null || dto.updatedAt > local.updatedAt) {
+                    if (dto.id !in existingAssetIds) {
                         assetDao.insert(dto.toEntity())
                         assetsPulled++
                     }
                 }
-                // Insert transactions dari server yang belum ada lokal
+                // Bulk check: cari transaksi yang belum ada di lokal
+                val existingTxIds = transactionDao.getExistingIds(
+                    body.transactions.map { it.id }
+                ).toSet()
                 for (dto in body.transactions) {
-                    if (transactionDao.getById(dto.id) == null) {
+                    if (dto.id !in existingTxIds) {
                         transactionDao.insert(dto.toEntity())
                         txPulled++
                     }

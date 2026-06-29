@@ -29,6 +29,9 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions WHERE id = :id LIMIT 1")
     suspend fun getById(id: String): TransactionEntity?
 
+    @Query("SELECT id FROM transactions WHERE id IN (:ids)")
+    suspend fun getExistingIds(ids: List<String>): List<String>
+
     // Transaksi yang belum dikirim ke server
     @Query("SELECT * FROM transactions WHERE isSynced = 0")
     suspend fun getPending(): List<TransactionEntity>

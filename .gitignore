@@ -1,0 +1,4 @@
+# Large files that exceed GitHub limits
+masterBarang.zip
+android/app/release/app-release.apk
+*.apk

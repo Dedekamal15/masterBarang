@@ -25,20 +25,25 @@ import javax.inject.Provider;
 public final class MasterBarangManager_Factory implements Factory<MasterBarangManager> {
   private final Provider<Context> contextProvider;
 
-  public MasterBarangManager_Factory(Provider<Context> contextProvider) {
+  private final Provider<ImageCompressor> imageCompressorProvider;
+
+  public MasterBarangManager_Factory(Provider<Context> contextProvider,
+      Provider<ImageCompressor> imageCompressorProvider) {
     this.contextProvider = contextProvider;
+    this.imageCompressorProvider = imageCompressorProvider;
   }
 
   @Override
   public MasterBarangManager get() {
-    return newInstance(contextProvider.get());
+    return newInstance(contextProvider.get(), imageCompressorProvider.get());
   }
 
-  public static MasterBarangManager_Factory create(Provider<Context> contextProvider) {
-    return new MasterBarangManager_Factory(contextProvider);
+  public static MasterBarangManager_Factory create(Provider<Context> contextProvider,
+      Provider<ImageCompressor> imageCompressorProvider) {
+    return new MasterBarangManager_Factory(contextProvider, imageCompressorProvider);
   }
 
-  public static MasterBarangManager newInstance(Context context) {
-    return new MasterBarangManager(context);
+  public static MasterBarangManager newInstance(Context context, ImageCompressor imageCompressor) {
+    return new MasterBarangManager(context, imageCompressor);
   }
 }

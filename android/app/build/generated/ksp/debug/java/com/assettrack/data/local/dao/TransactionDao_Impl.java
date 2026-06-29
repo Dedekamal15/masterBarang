@@ -578,6 +578,44 @@ public final class TransactionDao_Impl implements TransactionDao {
   }
 
   @Override
+  public Object getExistingIds(final List<String> ids,
+      final Continuation<? super List<String>> $completion) {
+    final StringBuilder _stringBuilder = StringUtil.newStringBuilder();
+    _stringBuilder.append("SELECT id FROM transactions WHERE id IN (");
+    final int _inputSize = ids.size();
+    StringUtil.appendPlaceholders(_stringBuilder, _inputSize);
+    _stringBuilder.append(")");
+    final String _sql = _stringBuilder.toString();
+    final int _argCount = 0 + _inputSize;
+    final RoomSQLiteQuery _statement = RoomSQLiteQuery.acquire(_sql, _argCount);
+    int _argIndex = 1;
+    for (String _item : ids) {
+      _statement.bindString(_argIndex, _item);
+      _argIndex++;
+    }
+    final CancellationSignal _cancellationSignal = DBUtil.createCancellationSignal();
+    return CoroutinesRoom.execute(__db, false, _cancellationSignal, new Callable<List<String>>() {
+      @Override
+      @NonNull
+      public List<String> call() throws Exception {
+        final Cursor _cursor = DBUtil.query(__db, _statement, false, null);
+        try {
+          final List<String> _result = new ArrayList<String>(_cursor.getCount());
+          while (_cursor.moveToNext()) {
+            final String _item_1;
+            _item_1 = _cursor.getString(0);
+            _result.add(_item_1);
+          }
+          return _result;
+        } finally {
+          _cursor.close();
+          _statement.release();
+        }
+      }
+    }, $completion);
+  }
+
+  @Override
   public Object getPending(final Continuation<? super List<TransactionEntity>> $completion) {
     final String _sql = "SELECT * FROM transactions WHERE isSynced = 0";
     final RoomSQLiteQuery _statement = RoomSQLiteQuery.acquire(_sql, 0);

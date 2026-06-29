@@ -4,7 +4,7 @@
             "outputFile": "com.assettrack.app-mergeReleaseResources-74:/values-v22/values-v22.xml",
             "map": [
                 {
-                    "source": "/home/dedekamal/.gradle/caches/transforms-4/a0e5c5765ed46f1b3bfc898dde8bbc78/transformed/appcompat-1.6.1/res/values-v22/values-v22.xml",
+                    "source": "/home/dedekamal/.gradle/caches/transforms-4/49f5081dcbb3f96f4bcb464b4dd2e918/transformed/appcompat-1.6.1/res/values-v22/values-v22.xml",
                     "from": {
                         "startLines": "2,3,4,9",
                         "startColumns": "4,4,4,4",

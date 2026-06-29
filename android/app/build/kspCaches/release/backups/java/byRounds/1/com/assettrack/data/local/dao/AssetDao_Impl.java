@@ -117,7 +117,7 @@ public final class AssetDao_Impl implements AssetDao {
       @Override
       @NonNull
       public String createQuery() {
-        final String _query = "UPDATE assets SET status = ?, updatedAt = ? WHERE id = ?";
+        final String _query = "UPDATE assets SET status = ?, updatedAt = ?, isSynced = 0 WHERE id = ?";
         return _query;
       }
     };
@@ -341,6 +341,44 @@ public final class AssetDao_Impl implements AssetDao {
             _result = new AssetEntity(_tmpId,_tmpName,_tmpCategory,_tmpSerialNumber,_tmpDescription,_tmpLocation,_tmpStatus,_tmpIsSynced,_tmpCreatedAt,_tmpUpdatedAt);
           } else {
             _result = null;
+          }
+          return _result;
+        } finally {
+          _cursor.close();
+          _statement.release();
+        }
+      }
+    }, $completion);
+  }
+
+  @Override
+  public Object getExistingIds(final List<String> ids,
+      final Continuation<? super List<String>> $completion) {
+    final StringBuilder _stringBuilder = StringUtil.newStringBuilder();
+    _stringBuilder.append("SELECT id FROM assets WHERE id IN (");
+    final int _inputSize = ids.size();
+    StringUtil.appendPlaceholders(_stringBuilder, _inputSize);
+    _stringBuilder.append(")");
+    final String _sql = _stringBuilder.toString();
+    final int _argCount = 0 + _inputSize;
+    final RoomSQLiteQuery _statement = RoomSQLiteQuery.acquire(_sql, _argCount);
+    int _argIndex = 1;
+    for (String _item : ids) {
+      _statement.bindString(_argIndex, _item);
+      _argIndex++;
+    }
+    final CancellationSignal _cancellationSignal = DBUtil.createCancellationSignal();
+    return CoroutinesRoom.execute(__db, false, _cancellationSignal, new Callable<List<String>>() {
+      @Override
+      @NonNull
+      public List<String> call() throws Exception {
+        final Cursor _cursor = DBUtil.query(__db, _statement, false, null);
+        try {
+          final List<String> _result = new ArrayList<String>(_cursor.getCount());
+          while (_cursor.moveToNext()) {
+            final String _item_1;
+            _item_1 = _cursor.getString(0);
+            _result.add(_item_1);
           }
           return _result;
         } finally {

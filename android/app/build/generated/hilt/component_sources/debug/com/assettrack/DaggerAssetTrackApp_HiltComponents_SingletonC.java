@@ -430,9 +430,9 @@ public final class DaggerAssetTrackApp_HiltComponents_SingletonC {
 
       static String com_assettrack_presentation_screens_registration_RegistrationViewModel = "com.assettrack.presentation.screens.registration.RegistrationViewModel";
 
-      static String com_assettrack_presentation_screens_transaction_TransactionViewModel = "com.assettrack.presentation.screens.transaction.TransactionViewModel";
-
       static String com_assettrack_presentation_screens_history_HistoryViewModel = "com.assettrack.presentation.screens.history.HistoryViewModel";
+
+      static String com_assettrack_presentation_screens_transaction_TransactionViewModel = "com.assettrack.presentation.screens.transaction.TransactionViewModel";
 
       @KeepFieldType
       DashboardViewModel com_assettrack_presentation_screens_dashboard_DashboardViewModel2;
@@ -441,10 +441,10 @@ public final class DaggerAssetTrackApp_HiltComponents_SingletonC {
       RegistrationViewModel com_assettrack_presentation_screens_registration_RegistrationViewModel2;
 
       @KeepFieldType
-      TransactionViewModel com_assettrack_presentation_screens_transaction_TransactionViewModel2;
+      HistoryViewModel com_assettrack_presentation_screens_history_HistoryViewModel2;
 
       @KeepFieldType
-      HistoryViewModel com_assettrack_presentation_screens_history_HistoryViewModel2;
+      TransactionViewModel com_assettrack_presentation_screens_transaction_TransactionViewModel2;
     }
   }
 
@@ -494,22 +494,22 @@ public final class DaggerAssetTrackApp_HiltComponents_SingletonC {
 
     @IdentifierNameString
     private static final class LazyClassKeyProvider {
-      static String com_assettrack_presentation_screens_history_HistoryViewModel = "com.assettrack.presentation.screens.history.HistoryViewModel";
+      static String com_assettrack_presentation_screens_transaction_TransactionViewModel = "com.assettrack.presentation.screens.transaction.TransactionViewModel";
 
       static String com_assettrack_presentation_screens_dashboard_DashboardViewModel = "com.assettrack.presentation.screens.dashboard.DashboardViewModel";
 
-      static String com_assettrack_presentation_screens_transaction_TransactionViewModel = "com.assettrack.presentation.screens.transaction.TransactionViewModel";
+      static String com_assettrack_presentation_screens_history_HistoryViewModel = "com.assettrack.presentation.screens.history.HistoryViewModel";
 
       static String com_assettrack_presentation_screens_registration_RegistrationViewModel = "com.assettrack.presentation.screens.registration.RegistrationViewModel";
 
       @KeepFieldType
-      HistoryViewModel com_assettrack_presentation_screens_history_HistoryViewModel2;
+      TransactionViewModel com_assettrack_presentation_screens_transaction_TransactionViewModel2;
 
       @KeepFieldType
       DashboardViewModel com_assettrack_presentation_screens_dashboard_DashboardViewModel2;
 
       @KeepFieldType
-      TransactionViewModel com_assettrack_presentation_screens_transaction_TransactionViewModel2;
+      HistoryViewModel com_assettrack_presentation_screens_history_HistoryViewModel2;
 
       @KeepFieldType
       RegistrationViewModel com_assettrack_presentation_screens_registration_RegistrationViewModel2;

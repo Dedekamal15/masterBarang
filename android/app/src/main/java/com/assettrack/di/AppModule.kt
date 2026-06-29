@@ -44,9 +44,9 @@ object AppModule {
     @Provides
     @Singleton
     fun provideOkHttpClient(): OkHttpClient = OkHttpClient.Builder()
-        .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(60, TimeUnit.SECONDS)       // lebih lama untuk upload file
-        .writeTimeout(60, TimeUnit.SECONDS)
+        .connectTimeout(10, TimeUnit.SECONDS)     // turun dari 30s — deteksi cepat jika server unreachable
+        .readTimeout(30, TimeUnit.SECONDS)        // turun dari 60s
+        .writeTimeout(60, TimeUnit.SECONDS)       // tetap 60s untuk upload file bukti
         .addInterceptor(
             HttpLoggingInterceptor().apply {
                 level = if (BuildConfig.DEBUG)

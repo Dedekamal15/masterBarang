@@ -3696,6 +3696,7 @@ module_dependencies {
   dependency_index: 163
   dependency_index: 164
   dependency_index: 165
+  dependency_index: 129
   dependency_index: 170
 }
 repositories {

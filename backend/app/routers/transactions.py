@@ -1,5 +1,6 @@
 import os
 import shutil
+import logging
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -8,6 +9,8 @@ from typing import List
 from app.database import get_db
 from app.models.models import Transaction, TransactionType, Asset, AssetStatus
 from app.schemas.schemas import TransactionBatchRequest, SyncResponse, TransactionResponse
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -31,16 +34,27 @@ async def sync_transactions_batch(
     # Urutkan berdasarkan timestamp agar urutan CHECK_OUT/CHECK_IN benar
     sorted_transactions = sorted(payload.transactions, key=lambda t: t.timestamp_ms)
 
-    for tx_dto in sorted_transactions:
-        try:
-            # Idempotency check
-            existing = await db.execute(
-                select(Transaction).where(Transaction.id == tx_dto.id)
-            )
-            if existing.scalar_one_or_none():
-                synced_ids.append(tx_dto.id)
-                continue
+    # ── Bulk fetch existing transaction IDs for idempotency ──
+    tx_ids = [t.id for t in sorted_transactions]
+    existing_result = await db.execute(
+        select(Transaction.id).where(Transaction.id.in_(tx_ids))
+    )
+    existing_ids: set[str] = set(existing_result.scalars().all())
 
+    # ── Bulk fetch all involved assets ──
+    asset_ids = list({t.asset_id for t in sorted_transactions})
+    asset_result = await db.execute(
+        select(Asset).where(Asset.id.in_(asset_ids))
+    )
+    asset_map = {a.id: a for a in asset_result.scalars().all()}
+
+    for tx_dto in sorted_transactions:
+        # Skip existing (idempotent)
+        if tx_dto.id in existing_ids:
+            synced_ids.append(tx_dto.id)
+            continue
+
+        try:
             # Insert transaksi
             db.add(Transaction(
                 id                  = tx_dto.id,
@@ -59,11 +73,8 @@ async def sync_transactions_batch(
                 evidence_type       = tx_dto.evidence_type,
             ))
 
-            # ✅ FIX: Update status asset berdasarkan tipe transaksi
-            asset_result = await db.execute(
-                select(Asset).where(Asset.id == tx_dto.asset_id)
-            )
-            asset = asset_result.scalar_one_or_none()
+            # Update status asset (in-memory, no extra query needed)
+            asset = asset_map.get(tx_dto.asset_id)
             if asset:
                 if tx_dto.type.value == "CHECK_OUT":
                     asset.status     = AssetStatus.BORROWED
@@ -75,6 +86,7 @@ async def sync_transactions_batch(
             synced_ids.append(tx_dto.id)
 
         except Exception as e:
+            logger.exception("Failed to sync transaction %s: %s", tx_dto.id, e)
             failed_ids.append(tx_dto.id)
 
     await db.flush()
